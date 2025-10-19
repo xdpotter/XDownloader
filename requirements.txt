@@ -1,0 +1,6 @@
+# requirements.txt
+Flask
+flask-cors
+yt-dlp
+# You MUST include a system-level ffmpeg for MP3 and advanced format merging
+# But for Docker, we handle this in the Dockerfile
