@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: xdownloader
+    env: docker
+    plan: free
+    region: frankfurt
+    numInstances: 1
+    healthCheckPath: /health
