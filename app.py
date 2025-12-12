@@ -4,87 +4,100 @@ import yt_dlp
 import os
 import tempfile
 import time
-import re
 from keep_alive import start_keep_alive
 
 app = Flask(__name__)
 CORS(app)
 
-TEMP_DIR = os.path.join(tempfile.gettempdir(), 'xdownloader_files')
+# Temporary directory for downloads
+TEMP_DIR = os.path.join(tempfile.gettempdir(), "xdownloader_files")
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-@app.route('/api/download', methods=['POST'])
+
+@app.route("/api/download", methods=["POST"])
 def download_media():
     data = request.get_json()
-    url = data.get('url')
-    download_option = data.get('format', 'mp4_hd')
+    url = data.get("url")
+    download_option = data.get("format", "mp4_hd")
 
     if not url:
-        return jsonify({"status": "error", "message": "Missing URL"}), 400
+        return jsonify({"status": "error", "message": "Missing URL parameter"}), 400
 
     timestamp = int(time.time())
-    base_output = os.path.join(TEMP_DIR, f"output_{timestamp}.%(ext)s")
+    output_template = os.path.join(TEMP_DIR, f"media_{timestamp}.%(ext)s")
 
+    # ------------------ yt-dlp options ------------------
     ydl_opts = {
-        'outtmpl': base_output,
-        'noplaylist': True,
-        'quiet': True,
-        'nocheckcertificate': True,
-        'postprocessors': [],
+        "outtmpl": output_template,
+        "noplaylist": True,
+        "quiet": True,
+        "nocheckcertificate": True,
+        "postprocessors": []
     }
 
-    # FORMAT SELECTION
+    # ---------------- FORMAT SELECTION ------------------
     if download_option == "mp3":
-        ydl_opts['format'] = 'bestaudio/best'
-        ydl_opts['postprocessors'] = [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }]
+        ydl_opts["format"] = "bestaudio/best"
+        ydl_opts["postprocessors"] = [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ]
 
-    elif download_option in ["video_hd", "mp4_hd", "best"]:
-        ydl_opts['format'] = 'bestvideo+bestaudio/best'
-    
-    elif download_option == "slides":
-        ydl_opts['format'] = 'best'
-        ydl_opts['outtmpl'] = os.path.join(TEMP_DIR, f"slides_{timestamp}_%(title)s_%(id)s.%(ext)s")
+    elif download_option in ["video_hd", "mp4_hd", "best", "video_best"]:
+        ydl_opts["format"] = "bestvideo+bestaudio/best"
+
+    elif download_option in ["slides", "photo_best"]:
+        ydl_opts["format"] = "best"
 
     else:
-        ydl_opts['format'] = 'best'
+        ydl_opts["format"] = "best"
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Download and get info
             info = ydl.extract_info(url, download=True)
-            title = info.get("title", "download")
 
-            # Find output file
-            files = os.listdir(TEMP_DIR)
-            matches = [f for f in files if str(timestamp) in f]
+            # Get correct filename
+            final_path = ydl.prepare_filename(info)
 
-            if not matches:
-                raise Exception("No file downloaded")
+            # If mp3, fix extension
+            if download_option == "mp3":
+                final_path = final_path.rsplit(".", 1)[0] + ".mp3"
 
-            file_path = os.path.join(TEMP_DIR, matches[0])
-            download_name = matches[0]
+            if not os.path.exists(final_path):
+                raise Exception("Download failed: file not found.")
+
+            # Clean download name for user
+            download_name = os.path.basename(final_path)
 
             return send_file(
-                file_path,
+                final_path,
                 as_attachment=True,
-                download_name=download_name
+                download_name=download_name,
             )
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        print("Download Error:", e)
+        return jsonify({
+            "status": "error",
+            "message": f"Could not download media: {str(e)}"
+        }), 500
 
     finally:
-        # Clean up
-        if "file_path" in locals() and os.path.exists(file_path):
-            os.remove(file_path)
+        # Cleanup downloaded files
+        try:
+            if "final_path" in locals() and os.path.exists(final_path):
+                os.remove(final_path)
+        except:
+            pass
 
 
 @app.route("/health")
 def health():
-    return {"status": "ok", "msg": "Running ❤️"}, 200
+    return {"status": "ok", "msg": "Backend running ❤️"}, 200
 
 
 if __name__ == "__main__":
