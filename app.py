@@ -10,7 +10,8 @@ from keep_alive import start_keep_alive
 app = Flask(__name__)
 CORS(app)
 
-TEMP_DIR = os.path.join(tempfile.gettempdir(), 'xdownloader_files')
+# TEMP_DIR = os.path.join(tempfile.gettempdir(), 'xdownloader_files')
+TEMP_DIR = "/tmp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 @app.route('/api/download', methods=['POST'])
@@ -26,12 +27,14 @@ def download_media():
     base_output = os.path.join(TEMP_DIR, f"output_{timestamp}.%(ext)s")
 
     ydl_opts = {
-        'outtmpl': base_output,
-        'noplaylist': True,
-        'quiet': True,
-        'nocheckcertificate': True,
-        'postprocessors': [],
-    }
+    'outtmpl': os.path.join(TEMP_DIR, f"output_{timestamp}.%(ext)s"),
+    'format': 'best',
+    'noplaylist': True,
+    'nocheckcertificate': True,
+    'quiet': False,
+    'verbose': True,
+    'merge_output_format': 'mp4',
+}
 
     # FORMAT SELECTION
     if download_option == "mp3":
