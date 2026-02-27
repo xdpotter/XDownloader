@@ -31,6 +31,7 @@ def download_media():
     'format': 'best',
     'noplaylist': True,
     'nocheckcertificate': True,
+    'cookiefile': 'cookies.txt',
     'quiet': False,
     'verbose': True,
     'merge_output_format': 'mp4',
@@ -94,3 +95,4 @@ if __name__ == "__main__":
     start_keep_alive()
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
