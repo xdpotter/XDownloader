@@ -43,7 +43,7 @@ def download_media():
         }]
 
     elif download_option in ["video_hd", "mp4_hd", "best"]:
-        ydl_opts['format'] = 'bestvideo+bestaudio/best'
+        ydl_opts['format'] = 'best'
     
     elif download_option == "slides":
         ydl_opts['format'] = 'best'
@@ -89,4 +89,5 @@ def health():
 
 if __name__ == "__main__":
     start_keep_alive()
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
